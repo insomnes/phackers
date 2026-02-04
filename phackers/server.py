@@ -146,6 +146,7 @@ async def _run_server(
         await serve(server)
     except Exception as e:
         logger.error(f"Server error: {e}", exc_info=True)
+        raise RuntimeError("Server encountered an error") from e
     finally:
         if not stop_event.is_set():
             stop_event.set()

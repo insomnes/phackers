@@ -86,26 +86,6 @@ def _ensure_common_options(func: Callable) -> Callable:
     return func
 
 
-def with_common_options(func: Callable) -> Callable:
-
-    @wraps(func)
-    @click.pass_context
-    def wrapper(ctx, *args, **kwargs):
-        ctx.obj = Config(
-            verbose=kwargs.pop("verbose"),
-            address=kwargs.pop("address"),
-            port=kwargs.pop("port"),
-            buffer=kwargs.pop("buffer"),
-            with_uvloop=kwargs.pop("with_uvloop"),
-            log_level=kwargs.pop("log_level"),
-        )
-        ctx.obj.run_configure()
-        logger.info("Starting command: %s", Path(sys.argv[0]).name)
-        return func(*args, **kwargs)
-
-    return click.command()(_ensure_common_options(wrapper))
-
-
 def eprint(msg: str) -> None:
     """Print a message to stderr."""
     click.echo(msg, err=True)
@@ -115,3 +95,32 @@ def eprint_verbose(msg: str, cfg: Config, level: int = 1) -> None:
     """Print a message to stderr if verbosity level is sufficient."""
     if cfg.verbose >= level:
         eprint(msg)
+
+
+def with_common_options(func: Callable) -> Callable:
+
+    @wraps(func)
+    @click.pass_context
+    def wrapper(ctx, *args, **kwargs):
+        cfg = Config(
+            verbose=kwargs.pop("verbose"),
+            address=kwargs.pop("address"),
+            port=kwargs.pop("port"),
+            buffer=kwargs.pop("buffer"),
+            with_uvloop=kwargs.pop("with_uvloop"),
+            log_level=kwargs.pop("log_level"),
+        )
+        cfg.run_configure()
+        ctx.obj = cfg
+        cmd_name = Path(sys.argv[0]).name
+        logger.info("Starting command: %s", Path(sys.argv[0]).name)
+        try:
+            func(*args, **kwargs)
+        except Exception as e:
+            eprint(f"Error during {cmd_name} executior {e}")
+            if cfg.verbose >= 1:
+                click.echo(e.__traceback__, err=True)
+            return 1
+        return 0
+
+    return click.command()(_ensure_common_options(wrapper))

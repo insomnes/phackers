@@ -1,0 +1,61 @@
+[project]
+name = "phackers"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "click>=8.3.1",
+    "uvloop>=0.22.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.1",
+    "ruff>=0.14.7",
+]
+
+[tool.poetry.dev-dependencies]
+phackers = {path = ".", develop = true}
+
+[project.scripts]
+ph-echo = "phackers.main:echo"
+
+[tool.uv]
+package = true
+
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+
+[tool.ruff.lint]
+extend-select = ["E", "W", "F", "C", "SIM", "B", "Q", "I"]
+
+
+
+[tool.basedpyright]
+include = ["src"]
+exclude = [
+    "**/node_modules",
+    "**/.build",
+    "**/.ruff_cache",
+    "**/.venv",
+    "**/.mypy_cache",
+    "**/venv",
+    "**/__pycache__",
+    "**/.idea",
+    "**/*.ipynb",
+    "**/logs",
+    "**/.git",
+]
+autoSearchPaths = true
+autoImportCompletions = true
+typeCheckingMode = "standard"
+useLibraryCodeForTypes = true
+
+reportImportCycles = "error"
+reportMissingImports = "error"
+reportMissingTypeStubs = false
+
+pythonVersion = "3.14"

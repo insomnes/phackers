@@ -15,5 +15,7 @@ https://protohackers.com
 
 # Echo Server
 [Echo Server](https://protohackers.com/problem/0) - A simple echo server that listens for incoming TCP connections and echoes back any data it receives.
+
 Solution: [echo.py](solutions/echo.py)
+
 To run: `uv run ph-echo [-v] [--host HOST] [--port PORT]`

@@ -34,6 +34,9 @@ target-version = "py314"
 
 [tool.ruff.lint]
 extend-select = ["E", "W", "F", "C", "SIM", "B", "Q", "I"]
+ignore = [
+    "C901",  # is too complex
+]
 
 
 

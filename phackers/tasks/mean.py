@@ -39,7 +39,7 @@ class ParsedQuery(NamedTuple):
         return self.mintime <= self.maxtime
 
 
-def parse_request(data: bytes) -> ParsedInsert | ParsedQuery:
+def parse_request(data: memoryview) -> ParsedInsert | ParsedQuery:
     if len(data) != RawRequest.size:
         raise ValueError(f"Invalid request length: expected {RawRequest.size}, got {len(data)}")
     method_byte, field1, field2 = RawRequest.unpack_from(data)
@@ -108,26 +108,33 @@ def create_mean_handler(cfg: Config, stop: asyncio.Event) -> ConnHandler:
 
     async def handle_mean_conn(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
         addr = writer.get_extra_info("peername")
+        req_buffer = memoryview(bytearray(RawRequest.size))
         resp_buffer = memoryview(bytearray(Response.size))
         registry = PriceRegistry(asyncio.get_running_loop())
+
+        async def read_request() -> bool:
+            cnt = 0
+            while cnt < RawRequest.size:
+                chunk = await reader.read(RawRequest.size - cnt)
+                if chunk == 0:
+                    return False
+                cnt += len(chunk)
+                req_buffer[cnt - len(chunk) : cnt] = chunk
+            return True
 
         async def write_response(response: memoryview) -> None:
             writer.write(response)
             await writer.drain()
 
         while not stop.is_set():
-            data = await reader.read(RawRequest.size)
-            if not data:
-                logger.debug(f"Connection from {addr} closed")
-                break
-
-            logger.debug(f"Received data from {addr}: {data!r}")
             try:
-                if len(data) != RawRequest.size:
-                    raise ValueError(
-                        f"Invalid request length: expected {RawRequest.size}, got {len(data)}"
-                    )
-                req = parse_request(data)
+                ok = await read_request()
+                if not ok:
+                    logger.debug(f"Connection closed by {addr}")
+                    break
+
+                logger.debug(f"Received data from {addr}: {req_buffer!r}")
+                req = parse_request(req_buffer)
                 match req:
                     case ParsedInsert(method="I", ts=ts, price=price):
                         await registry.insert(ts, price)

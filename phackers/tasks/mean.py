@@ -59,48 +59,34 @@ def parse_request(data: memoryview) -> ParsedInsert | ParsedQuery:
 Response = struct.Struct(">i")
 
 
-class SumList:
-    def __init__(self) -> None:
-        self._sums: list[int] = [0] * 10_000
-        self._sums.clear()
-
-    def insert(self, n: int, idx: int) -> None:
-        left, right = self._sums[:idx], self._sums[idx:]
-        n_sum = n if not left else left[-1] + n
-        left.append(n_sum)
-        self._sums = left + [r + n for r in right]
-
-    def query(self, left_idx: int, right_idx: int) -> int:
-        if left_idx == 0:
-            return self._sums[right_idx - 1]
-        return self._sums[right_idx - 1] - self._sums[left_idx - 1]
-
-
 class PriceRegistry:
     def __init__(self, loop: asyncio.AbstractEventLoop) -> None:
-        self._timestamps: list[int] = []
-        self._sum_list = SumList()
+        self._prices: list[tuple[int, int]] = []
         self._loop = loop
 
     # Because we have single client inserts
     # we can avoid locking because we are doing all the Insert / Query operations
     # sequentially (we can't query while inserting, and we can't insert while querying)
     def _insert(self, ts: int, price: int) -> None:
-        idx = bisect.bisect_left(self._timestamps, ts)
-        bisect.insort_left(self._timestamps, ts)
-        self._sum_list.insert(price, idx)
+        bisect.insort_left(self._prices, (ts, price))
 
     async def insert(self, ts: int, price: int) -> None:
         await self._loop.run_in_executor(None, self._insert, ts, price)
 
-    def query(self, mintime: int, maxtime: int) -> int:
-        if mintime > maxtime:
-            return 0
-        left_idx = bisect.bisect_left(self._timestamps, mintime)
-        right_idx = bisect.bisect_right(self._timestamps, maxtime)
+    def _query(self, mintime: int, maxtime: int) -> int:
+
+        left_idx = bisect.bisect_left(self._prices, (mintime, -float("inf")))
+        right_idx = bisect.bisect_right(self._prices, (maxtime, float("inf")))
         if left_idx >= right_idx:
             return 0
-        return self._sum_list.query(left_idx, right_idx) // (right_idx - left_idx)
+        total_price = sum(price for _, price in self._prices[left_idx:right_idx])
+        count = right_idx - left_idx
+        return total_price // count
+
+    async def query(self, mintime: int, maxtime: int) -> int:
+        if mintime > maxtime:
+            return 0
+        return await self._loop.run_in_executor(None, self._query, mintime, maxtime)
 
 
 def create_mean_handler(cfg: Config, stop: asyncio.Event) -> ConnHandler:
@@ -143,7 +129,7 @@ def create_mean_handler(cfg: Config, stop: asyncio.Event) -> ConnHandler:
                     case ParsedInsert(method="I", ts=ts, price=price):
                         await registry.insert(ts, price)
                     case ParsedQuery(method="Q", mintime=mintime, maxtime=maxtime):
-                        mean_price = registry.query(mintime, maxtime)
+                        mean_price = await registry.query(mintime, maxtime)
                         Response.pack_into(resp_buffer, 0, mean_price)
                         await write_response(resp_buffer)
                     case _:

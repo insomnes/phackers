@@ -66,6 +66,7 @@ def create_prime_handler(cfg: Config, stop: asyncio.Event) -> ConnHandler:
                 req.validate()
                 prime = await is_prime(req.number)
                 response = TRUE_RESPONSE if prime else FALSE_RESPONSE
+                logger.debug(f"Sending response to {addr}: {response!r}")
                 await write_response(response)
             except Exception as e:
                 logger.error(f"Error processing request from {addr}: {e}")

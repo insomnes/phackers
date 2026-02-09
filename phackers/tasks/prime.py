@@ -27,7 +27,7 @@ MALFORMED_RESPONSE = msgspec.json.encode({"error": "bad request"})
 def _is_prime(n: int) -> bool:
     if 1 < n <= 3:
         return True
-    if n == 1 or n % 2 == 0 or n % 3 == 0:
+    if n <= 1 or n % 2 == 0 or n % 3 == 0:
         return False
 
     i = 5

@@ -22,6 +22,7 @@ phackers = {path = ".", develop = true}
 [project.scripts]
 ph-echo = "phackers.main:echo"
 ph-prime = "phackers.main:prime"
+ph-mean = "phackers.main:mean"
 
 [tool.uv]
 package = true

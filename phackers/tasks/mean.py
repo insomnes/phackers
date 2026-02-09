@@ -113,6 +113,8 @@ def create_mean_handler(cfg: Config, stop: asyncio.Event) -> ConnHandler:
         registry = PriceRegistry(asyncio.get_running_loop())
 
         async def read_request() -> bool:
+            nonlocal req_buffer
+
             cnt = 0
             while cnt < RawRequest.size:
                 chunk = await reader.read(RawRequest.size - cnt)

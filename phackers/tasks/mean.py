@@ -116,12 +116,17 @@ def create_mean_handler(cfg: Config, stop: asyncio.Event) -> ConnHandler:
             await writer.drain()
 
         while not stop.is_set():
-            data = await reader.readexactly(RawRequest.size)
+            data = await reader.read(RawRequest.size)
             if not data:
                 logger.debug(f"Connection from {addr} closed")
                 break
+
             logger.debug(f"Received data from {addr}: {data!r}")
             try:
+                if len(data) != RawRequest.size:
+                    raise ValueError(
+                        f"Invalid request length: expected {RawRequest.size}, got {len(data)}"
+                    )
                 req = parse_request(data)
                 match req:
                     case ParsedInsert(method="I", ts=ts, price=price):

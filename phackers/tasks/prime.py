@@ -12,7 +12,7 @@ logger = logging.getLogger(Path(__name__).stem)
 
 class PrimeRequest(msgspec.Struct):
     method: str
-    number: int
+    number: int | float
 
     def validate(self) -> None:
         if self.method != "isPrime":
@@ -25,11 +25,6 @@ MALFORMED_RESPONSE = msgspec.json.encode({"error": "bad request"})
 
 
 def _is_prime(n: int) -> bool:
-    if 1 < n <= 3:
-        return True
-    if n <= 1 or n % 2 == 0 or n % 3 == 0:
-        return False
-
     i = 5
     while i * i <= n:
         if n % i == 0 or n % (i + 2) == 0:
@@ -38,7 +33,13 @@ def _is_prime(n: int) -> bool:
     return True
 
 
-async def is_prime(n: int) -> bool:
+async def is_prime(n: int | float) -> bool:
+    if isinstance(n, float) or n != int(n):
+        return False
+    if 1 < n <= 3:
+        return True
+    if n <= 1 or n % 2 == 0 or n % 3 == 0:
+        return False
     loop = asyncio.get_running_loop()
     return await loop.run_in_executor(None, _is_prime, n)
 

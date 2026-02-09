@@ -1,8 +1,8 @@
 import click
 
 from phackers.cli import Config, with_common_options
-from phackers.echo import create_echo_handler
 from phackers.server import run_server
+from phackers.tasks.echo import create_echo_handler
 
 
 @with_common_options

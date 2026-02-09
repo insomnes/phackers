@@ -117,8 +117,10 @@ def create_mean_handler(cfg: Config, stop: asyncio.Event) -> ConnHandler:
 
             cnt = 0
             while cnt < RawRequest.size:
+                logger.debug(f"Reading request from {addr}, bytes read so far: {cnt}")
                 chunk = await reader.read(RawRequest.size - cnt)
-                if chunk == 0:
+                logger.debug(f"Read chunk from {addr}: {chunk!r}")
+                if len(chunk) == 0:
                     return False
                 cnt += len(chunk)
                 req_buffer[cnt - len(chunk) : cnt] = chunk

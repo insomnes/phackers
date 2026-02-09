@@ -55,7 +55,7 @@ def create_prime_handler(cfg: Config, stop: asyncio.Event) -> ConnHandler:
             await writer.drain()
 
         while not stop.is_set():
-            data = await reader.read(cfg.buffer)
+            data = await reader.readline()
             if not data:
                 logger.debug(f"Connection from {addr} closed")
                 break

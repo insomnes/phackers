@@ -67,11 +67,8 @@ class PriceRegistry:
     # Because we have single client inserts
     # we can avoid locking because we are doing all the Insert / Query operations
     # sequentially (we can't query while inserting, and we can't insert while querying)
-    def _insert(self, ts: int, price: int) -> None:
+    def insert(self, ts: int, price: int) -> None:
         bisect.insort_left(self._prices, (ts, price))
-
-    async def insert(self, ts: int, price: int) -> None:
-        await self._loop.run_in_executor(None, self._insert, ts, price)
 
     def _query(self, mintime: int, maxtime: int) -> int:
 
@@ -127,7 +124,7 @@ def create_mean_handler(cfg: Config, stop: asyncio.Event) -> ConnHandler:
                 req = parse_request(req_buffer)
                 match req:
                     case ParsedInsert(method="I", ts=ts, price=price):
-                        await registry.insert(ts, price)
+                        registry.insert(ts, price)
                     case ParsedQuery(method="Q", mintime=mintime, maxtime=maxtime):
                         mean_price = await registry.query(mintime, maxtime)
                         Response.pack_into(resp_buffer, 0, mean_price)
